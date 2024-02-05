@@ -157,7 +157,7 @@ func pkgOutput(id int, line string) map[int][]string {
 	return map[int][]string{id: {line}}
 }
 
-func TestScanOutput_WithMissingEvents(t *testing.T) {
+func TestScanTestOutput_WithMissingEvents(t *testing.T) {
 	source := golden.Get(t, "go-test-json-missing-test-events.out")
 	handler := &captureHandler{}
 	cfg := ScanConfig{
@@ -190,7 +190,7 @@ func TestScanOutput_WithMissingEvents(t *testing.T) {
 	assert.DeepEqual(t, expected, handler.events[start:], cmpTestEventShallow)
 }
 
-func TestScanOutput_WithNonJSONLines(t *testing.T) {
+func TestScanTestOutput_WithNonJSONLines(t *testing.T) {
 	source := golden.Get(t, "go-test-json-with-nonjson-stdout.out")
 	nonJSONLine := "|||This line is not valid test2json output.|||"
 
@@ -218,7 +218,7 @@ func TestScanOutput_WithNonJSONLines(t *testing.T) {
 	}
 }
 
-func TestScanOutput_WithGODEBUG(t *testing.T) {
+func TestScanTestOutput_WithGODEBUG(t *testing.T) {
 	goDebugSource := `HASH[moduleIndex]
 HASH[moduleIndex]: "go1.20.4"
 HASH /usr/lib/go/src/runtime/debuglog_off.go: d6f147198
@@ -294,6 +294,23 @@ func TestFilterFailedUnique_MultipleNested(t *testing.T) {
 		{ID: 2, Package: "pkg2", Test: TestName("TestParent/TestNested")},
 		{ID: 3, Package: "pkg2", Test: TestName("TestParent/TestNestedPrefix")},
 		{ID: 4, Package: "pkg2", Test: TestName("TestParentPrefix")},
+	}
+	cmpTestCase := cmp.AllowUnexported(TestCase{})
+	assert.DeepEqual(t, expected, actual, cmpTestCase)
+}
+
+func TestFilterFailedUnique_NestedWithGaps(t *testing.T) {
+	input := []TestCase{
+		{ID: 1, Package: "pkg", Test: "TestParent/foo/bar/baz"},
+		{ID: 2, Package: "pkg", Test: "TestParent"},
+		{ID: 3, Package: "pkg", Test: "TestParent1/foo/bar"},
+		{ID: 4, Package: "pkg", Test: "TestParent1"},
+	}
+	actual := FilterFailedUnique(input)
+
+	expected := []TestCase{
+		{ID: 1, Package: "pkg", Test: "TestParent/foo/bar/baz"},
+		{ID: 3, Package: "pkg", Test: "TestParent1/foo/bar"},
 	}
 	cmpTestCase := cmp.AllowUnexported(TestCase{})
 	assert.DeepEqual(t, expected, actual, cmpTestCase)

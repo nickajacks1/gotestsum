@@ -56,13 +56,18 @@ func setupFlags(name string) (*pflag.FlagSet, *options) {
 	flags.Usage = func() {
 		usage(os.Stdout, name, flags)
 	}
+
 	flags.StringVarP(&opts.format, "format", "f",
-		lookEnvWithDefault("GOTESTSUM_FORMAT", "short"),
+		lookEnvWithDefault("GOTESTSUM_FORMAT", "pkgname"),
 		"print format of test input")
 	flags.BoolVar(&opts.formatOptions.HideEmptyPackages, "format-hide-empty-pkg",
 		false, "do not print empty packages in compact formats")
 	flags.BoolVar(&opts.formatOptions.UseHiVisibilityIcons, "format-hivis",
 		false, "use high visibility characters in some formats")
+	_ = flags.MarkHidden("format-hivis")
+	flags.StringVar(&opts.formatOptions.Icons, "format-icons",
+		lookEnvWithDefault("GOTESTSUM_FORMAT_ICONS", ""),
+		"use different icons, see help for options")
 	flags.BoolVar(&opts.rawCommand, "raw-command", false,
 		"don't prepend 'go test -json' to the 'go test' command")
 	flags.BoolVar(&opts.ignoreNonJSONOutputLines, "ignore-non-json-output-lines", false,
@@ -74,7 +79,7 @@ func setupFlags(name string) (*pflag.FlagSet, *options) {
 	flags.StringVar(&opts.jsonFileTimingEvents, "jsonfile-timing-events",
 		lookEnvWithDefault("GOTESTSUM_JSONFILE_TIMING_EVENTS", ""),
 		"write only the pass, skip, and fail TestEvents to the file")
-	flags.BoolVar(&opts.noColor, "no-color", defaultNoColor, "disable color output")
+	flags.BoolVar(&opts.noColor, "no-color", defaultNoColor(), "disable color output")
 
 	flags.Var(opts.hideSummary, "no-summary",
 		"do not print summary of: "+testjson.SummarizeAll.String())
@@ -139,8 +144,18 @@ Formats:
     pkgname                  print a line for each package
     pkgname-and-test-fails   print a line for each package and failed test output
     testname                 print a line for each test and package
+    testdox                  print a sentence for each test using gotestdox
+    github-actions           testname format with github actions log grouping
     standard-quiet           standard go test format
     standard-verbose         standard go test -v format
+
+Format icons:
+    default                  the original unicode (✓, ∅, ✖)
+    hivis                    higher visibility unicode (✅, ➖, ❌)
+    text                     simple text characters (PASS, SKIP, FAIL)
+    codicons                 requires a font from https://www.nerdfonts.com/ (  )
+    octicons                 requires a font from https://www.nerdfonts.com/ (  )
+    emoticons                requires a font from https://www.nerdfonts.com/ (󰇵 󰇶 󰇸)
 
 Commands:
     %[1]s tool slowest   find or skip the slowest tests
@@ -200,12 +215,12 @@ func (o options) Validate() error {
 	return nil
 }
 
-var defaultNoColor = func() bool {
+func defaultNoColor() bool {
 	// fatih/color will only output color when stdout is a terminal which is not
 	// true for many CI environments which support color output. So instead, we
 	// try to detect these CI environments via their environment variables.
 	// This code is based on https://github.com/jwalton/go-supportscolor
-	if _, exists := os.LookupEnv("CI"); exists {
+	if value, exists := os.LookupEnv("CI"); exists {
 		var ciEnvNames = []string{
 			"APPVEYOR",
 			"BUILDKITE",
@@ -224,12 +239,15 @@ var defaultNoColor = func() bool {
 		if os.Getenv("CI_NAME") == "codeship" {
 			return false
 		}
+		if value == "woodpecker" {
+			return false
+		}
 	}
 	if _, exists := os.LookupEnv("TEAMCITY_VERSION"); exists {
 		return false
 	}
 	return color.NoColor
-}()
+}
 
 func setupLogging(opts *options) {
 	if opts.debug {
@@ -317,7 +335,7 @@ func goTestCmdArgs(opts *options, rerunOpts rerunOpts) []string {
 		return result
 	}
 
-	args := opts.args
+	args := append([]string{}, opts.args...)
 	result := []string{"go", "test"}
 
 	if len(args) == 0 {

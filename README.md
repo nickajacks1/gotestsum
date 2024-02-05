@@ -40,14 +40,16 @@ The `--format` flag or `GOTESTSUM_FORMAT` environment variable set the format th
 is used to print the test names, and possibly test output, as the tests run. Most
 outputs use color to highlight pass, fail, or skip.
 
-The `--format-hivis` flag changes the icons used by `pkgname` formats to higher
-visiblity unicode characters.
+The `--format-icons` flag changes the icons used by `pkgname` and `testdox` formats.
+You can set the `GOTESTSUM_FORMAT_ICONS` environment variable, instead of the flag.
+The nerdfonts icons requires a font from [Nerd Fonts](https://www.nerdfonts.com/).
 
 Commonly used formats (see `--help` for a full list):
 
  * `dots` - print a character for each test.
  * `pkgname` (default) - print a line for each package.
  * `testname` - print a line for each test and package.
+ * `testdox` - print a sentence for each test using [gotestdox](https://github.com/bitfield/gotestdox).
  * `standard-quiet` - the standard `go test` format.
  * `standard-verbose` - the standard `go test -v` format.
 
@@ -139,7 +141,8 @@ test run has completed. The binary will be run with the following environment
 variables set:
 
 ```
-GOTESTSUM_FORMAT        # gotestsum format (ex: short)
+GOTESTSUM_ELAPSED       # test run time in seconds (ex: 2.45s)
+GOTESTSUM_FORMAT        # gotestsum format (ex: pkgname)
 GOTESTSUM_JSONFILE      # path to the jsonfile, empty if no file path was given
 GOTESTSUM_JUNITFILE     # path to the junit.xml file, empty if no file path was given
 TESTS_ERRORS            # number of errors
@@ -158,8 +161,14 @@ package may be used to parse the JSON file output.
 
 First install the example notification command with `go get gotest.tools/gotestsum/contrib/notify`.
 The command will be downloaded to `$GOPATH/bin` as `notify`. Note that this
-example `notify` command only works on macOS with
+example `notify` command only works on Linux with `notify-send` and on macOS with
 [terminal-notifer](https://github.com/julienXX/terminal-notifier) installed.
+
+On Linux, you need to have some "test-pass" and "test-fail" icons installed in your icon theme.
+Some sample icons can be found in `contrib/notify`, and can be installed with `make install`.
+
+On Windows, you can install [notify-send.exe](https://github.com/vaskovsky/notify-send)
+but it does not support custom icons so will have to use the basic "info" and "error".
 
 ```
 gotestsum --post-run-command notify
@@ -438,6 +447,7 @@ The projects below use (or have used) gotestsum.
 * [dex](https://github.com/dexidp/dex/blob/master/Makefile)
 * [coder](https://github.com/coder/coder/blob/main/Makefile)
 * [docker/cli](https://github.com/docker/cli/blob/master/Makefile)
+* [mattermost](https://github.com/mattermost/mattermost/blob/master/server/Makefile)
 
 Please open a GitHub issue or pull request to add or remove projects from this list.
 
